@@ -47,7 +47,6 @@ class TrackingService : LifecycleService(){
 
     var isFirstRun = true
 
-
     companion object {
       //  val timeRunInMillis = MutableLiveData<Long>()
         val isTracking = MutableLiveData<Boolean>()
@@ -63,6 +62,8 @@ class TrackingService : LifecycleService(){
                     if (isFirstRun) {
                         startForegroundService()
                         isFirstRun = false
+                    }else{
+                        startForegroundService()
                     }
                 }
                 ACTION_PAUSE_SERVICE -> {
@@ -85,15 +86,18 @@ class TrackingService : LifecycleService(){
 
         fusedLocationProviderClient = FusedLocationProviderClient(this)
         postInitialValues()
-        updateLocationTracking()
+
+        isTracking.observe(this, Observer {
+            updateLocationTracking(it)
+        })
+
 
     }
 
     private fun postInitialValues() {
         isTracking.postValue(false)
         pathPoints.postValue(mutableListOf())
-     //   timeRunInSeconds.postValue(0L)
-       // timeRunInMillis.postValue(0L)
+
     }
 
 
@@ -105,18 +109,22 @@ class TrackingService : LifecycleService(){
 
 
     @SuppressLint("MissingPermission")
-    fun updateLocationTracking(){
-        if (TrackingUtility.hasLocationPermissions(this)) {
-            val request = LocationRequest().apply {
-                interval = LOCATION_UPDATE_INTERVAL
-                fastestInterval = FASTEST_LOCATION_INTERVAL
-                priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+    fun updateLocationTracking(isTracking:Boolean){
+        if(isTracking) {
+            if (TrackingUtility.hasLocationPermissions(this)) {
+                val request = LocationRequest().apply {
+                    interval = LOCATION_UPDATE_INTERVAL
+                    fastestInterval = FASTEST_LOCATION_INTERVAL
+                    priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+                }
+                fusedLocationProviderClient.requestLocationUpdates(
+                    request,
+                    locationCallback,
+                    Looper.getMainLooper()
+                )
             }
-            fusedLocationProviderClient.requestLocationUpdates(
-                request,
-                locationCallback,
-                Looper.getMainLooper()
-            )
+        }else{
+            fusedLocationProviderClient.removeLocationUpdates(locationCallback)
         }
     }
 
@@ -124,14 +132,18 @@ class TrackingService : LifecycleService(){
         override fun onLocationResult(result: LocationResult?) {
             super.onLocationResult(result)
 
-            result?.locations?.let {locations->
-                for(location in locations){
+            if(isTracking.value!!){
+            result?.locations?.let { locations ->
+                for (location in locations) {
                     addPathPoint(location)
                     Timber.d("NEW LOCATION: ${location.latitude}, ${location.longitude}")
 
-                    Log.d("new_location","NEW LOCATION: ${location.latitude}, ${location.longitude}")
+                    Log.d(
+                        "new_location",
+                        "NEW LOCATION: ${location.latitude}, ${location.longitude}"
+                    )
                 }
-
+            }
             }
         }
     }
