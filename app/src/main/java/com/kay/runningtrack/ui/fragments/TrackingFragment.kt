@@ -18,6 +18,7 @@ import com.kay.runningtrack.util.Constants.ACTION_START_OR_RESUME_SERVICE
 import com.kay.runningtrack.util.Constants.MAP_ZOOM
 import com.kay.runningtrack.util.Constants.POLYLINE_COLOR
 import com.kay.runningtrack.util.Constants.POLYLINE_WIDTH
+import com.kay.runningtrack.util.TrackingUtility
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.fragment_tracking.*
 
@@ -30,6 +31,8 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
 
     private var isTracking = false
     private var pathPoints = mutableListOf<Polyline>()
+
+    private var curTimeInMillis = 0L
 
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -61,6 +64,15 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
             addLatestPolyline()
             moveCameraToUser()
         })
+
+
+        TrackingService.timeRunInMillis.observe(viewLifecycleOwner, Observer {
+            curTimeInMillis = it
+            val formattedTime = TrackingUtility.getFormattedStopWatchTime(curTimeInMillis, true)
+            tvTimer.text = formattedTime
+        })
+
+
     }
 
     private fun moveCameraToUser() {
